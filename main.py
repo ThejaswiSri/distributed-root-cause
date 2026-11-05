@@ -1,59 +1,76 @@
 import random
-import time
+# Service dependencies
+service_dependencies = {
+    "API Gateway": ["Authentication Service", "Payment Service"],
+    "Payment Service": ["Database Service"],
+    "Authentication Service": ["Database Service"],
+    "Notification Service": ["Database Service"],
+    "Database Service": []
+}
 
 # Distributed services
-services = {
-    "Database Service": "Unknown",
-    "Authentication Service": "Unknown",
-    "Payment Service": "Unknown",
-    "API Gateway": "Unknown",
-    "Notification Service": "Unknown"
-}
+services = [
+    "Database Service",
+    "Authentication Service",
+    "Payment Service",
+    "API Gateway",
+    "Notification Service",
+]
 
 
 def check_service_health():
+    """Check all services and return their health information."""
 
-    print("\n===== DISTRIBUTED SERVICE HEALTH MONITOR =====")
-
-    unhealthy_services = []
+    service_results = []
 
     for service in services:
-
         response_time = random.randint(50, 500)
 
         if response_time > 400:
             status = "Unhealthy"
-            unhealthy_services.append(service)
         else:
             status = "Healthy"
 
-        services[service] = status
+        service_results.append({
+            "Service": service,
+            "Latency (ms)": response_time,
+            "Status": status,
+        })
 
-        print(f"\nService: {service}")
-        print(f"Response Time: {response_time} ms")
-        print(f"Status: {status}")
+    return service_results
 
-    # Root Cause Analysis
-    print("\n===== ROOT CAUSE ANALYSIS =====")
+def analyze_root_causes(service_results):
+    """Identify unhealthy services and their unhealthy dependencies."""
 
-    if unhealthy_services:
+    status_by_service = {
+        item["Service"]: item["Status"]
+        for item in service_results
+    }
 
-        for service in unhealthy_services:
-            print(f"Possible issue detected in: {service}")
+    findings = []
 
-        print("\nRecommendation: Investigate unhealthy services.")
+    for service, status in status_by_service.items():
 
-    else:
-        print("All services are operating normally.")
+        if status == "Unhealthy":
 
-    print("\n===== MONITORING COMPLETED =====")
+            unhealthy_dependencies = [
+                dependency
+                for dependency in service_dependencies[service]
+                if status_by_service.get(dependency) == "Unhealthy"
+            ]
 
+            if unhealthy_dependencies:
+                findings.append(
+                    f"{service} may be affected by unhealthy "
+                    f"dependency: {', '.join(unhealthy_dependencies)}"
+                )
+            else:
+                findings.append(
+                    f"{service}: no unhealthy dependency detected. "
+                    "Investigate this service as a possible root cause."
+                )
 
-# Continuous monitoring
-try:
-    while True:
-        check_service_health()
-        time.sleep(3)
+    if not findings:
+        findings.append("All services are operating normally.")
 
-except KeyboardInterrupt:
-    print("\nMonitoring stopped by user.")
+    return findings
