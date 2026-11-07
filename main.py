@@ -1,4 +1,6 @@
+
 import random
+
 # Service dependencies
 service_dependencies = {
     "API Gateway": ["Authentication Service", "Payment Service"],
@@ -22,10 +24,9 @@ def check_service_health(failed_service=None):
     """Check service health and simulate dependency failure propagation."""
 
     service_results = []
-
-    # Generate initial service health
     status_by_service = {}
 
+    # Generate initial service health
     for service in services:
         if service == failed_service:
             response_time = 500
@@ -37,7 +38,7 @@ def check_service_health(failed_service=None):
         else:
             status_by_service[service] = "Healthy"
 
-        # Identify direct and indirect dependency failures
+    # Identify direct and indirect dependency failures
     affected_services = set()
 
     changed = True
@@ -80,8 +81,10 @@ def check_service_health(failed_service=None):
         })
 
     return service_results
+
+
 def analyze_root_causes(service_results):
-    """Identify unhealthy services and their unhealthy dependencies."""
+    """Identify root causes and services affected by failures."""
 
     status_by_service = {
         item["Service"]: item["Status"]
@@ -107,11 +110,39 @@ def analyze_root_causes(service_results):
                 )
             else:
                 findings.append(
-                    f"{service}: no unhealthy dependency detected. "
-                    "Investigate this service as a possible root cause."
+                    f"ROOT CAUSE: {service} is unhealthy. "
+                    "Investigate this service."
                 )
+
+        elif status == "Affected":
+            findings.append(
+                f"IMPACT: {service} is affected by another service failure."
+            )
 
     if not findings:
         findings.append("All services are operating normally.")
 
     return findings
+
+
+def predict_service_risk(latency_history):
+    """Estimate service failure risk using recent latency measurements."""
+
+    if len(latency_history) < 3:
+        return "Insufficient Data"
+
+    # Use the latest five measurements
+    recent_latencies = latency_history[-5:]
+
+    average_latency = (
+        sum(recent_latencies) / len(recent_latencies)
+    )
+
+    if average_latency >= 350:
+        return "High Risk"
+
+    elif average_latency >= 250:
+        return "Medium Risk"
+
+    else:
+        return "Low Risk"

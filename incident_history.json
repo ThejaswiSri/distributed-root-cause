@@ -1,0 +1,12 @@
+[
+    {
+        "Time": "2026-11-07 02:09:10",
+        "Service": "Database Service",
+        "Event": "Failure Injected"
+    },
+    {
+        "Time": "2026-11-07 02:09:20",
+        "Service": "Database Service",
+        "Event": "Service Recovered"
+    }
+]

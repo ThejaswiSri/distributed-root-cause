@@ -1,8 +1,37 @@
+
 import pandas as pd
 import streamlit as st
+import json
+import os
 from datetime import datetime
 
-from main import check_service_health, analyze_root_causes
+from main import (
+    check_service_health,
+    analyze_root_causes,
+    predict_service_risk,
+)
+
+# Persistent incident storage
+INCIDENT_FILE = "incident_history.json"
+
+
+def load_incidents():
+    """Load incident history from the JSON file."""
+    if os.path.exists(INCIDENT_FILE):
+        try:
+            with open(INCIDENT_FILE, "r", encoding="utf-8") as file:
+                return json.load(file)
+        except (json.JSONDecodeError, OSError):
+            return []
+
+    return []
+
+
+def save_incidents(incidents):
+    """Save incident history to the JSON file."""
+    with open(INCIDENT_FILE, "w", encoding="utf-8") as file:
+        json.dump(incidents, file, indent=4)
+
 
 st.set_page_config(
     page_title="Distributed Service Monitor",
@@ -12,8 +41,26 @@ st.set_page_config(
 
 st.title("🖥️ Distributed Service Health Monitor")
 st.caption("Live monitoring using the main.py health-check function")
+
+
+# Initialize incident history from persistent storage
 if "incident_history" not in st.session_state:
-    st.session_state["incident_history"] = []
+    st.session_state["incident_history"] = load_incidents()
+
+
+# Initialize latency history
+if "latency_history" not in st.session_state:
+    st.session_state["latency_history"] = {
+        service: [] for service in [
+            "Database Service",
+            "Authentication Service",
+            "Payment Service",
+            "API Gateway",
+            "Notification Service",
+        ]
+    }
+
+
 st.subheader("Failure Injection")
 
 selected_service = st.selectbox(
@@ -28,6 +75,7 @@ selected_service = st.selectbox(
     ],
 )
 
+
 if st.button("Inject Failure"):
     if selected_service == "None":
         st.warning("Please select a service first.")
@@ -41,8 +89,10 @@ if st.button("Inject Failure"):
         }
 
         st.session_state["incident_history"].append(incident)
+        save_incidents(st.session_state["incident_history"])
 
         st.success(f"Failure injected into {selected_service}!")
+
 
 if st.button("Recover All Services"):
     previous_failure = st.session_state.get("failed_service")
@@ -55,6 +105,7 @@ if st.button("Recover All Services"):
         }
 
         st.session_state["incident_history"].append(incident)
+        save_incidents(st.session_state["incident_history"])
 
     st.session_state["failed_service"] = None
     st.success("All services recovered!")
@@ -70,6 +121,19 @@ def show_dashboard():
     # Convert results into a DataFrame
     df = pd.DataFrame(records)
 
+    # Store recent latency measurements for each service
+    for record in records:
+        service = record["Service"]
+        latency = record["Latency (ms)"]
+
+        st.session_state["latency_history"][service].append(latency)
+
+        # Keep only the latest 10 measurements
+        st.session_state["latency_history"][service] = (
+            st.session_state["latency_history"][service][-10:]
+        )
+
+    # Calculate service metrics
     healthy = (df["Status"] == "Healthy").sum()
     unhealthy = (df["Status"] == "Unhealthy").sum()
     average_latency = round(df["Latency (ms)"].mean(), 2)
@@ -88,7 +152,7 @@ def show_dashboard():
 
     st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -115,11 +179,34 @@ def show_dashboard():
     for record in records:
         if record["Status"] == "Unhealthy":
             st.error(f"🔴 {record['Service']}: Unhealthy")
+
         elif record["Status"] == "Affected":
-            st.warning(f"🟠 {record['Service']}: Affected by dependency failure")
+            st.warning(
+                f"🟠 {record['Service']}: Affected by dependency failure"
+            )
+
         else:
             st.success(f"🟢 {record['Service']}: Healthy")
-    
+
+    # Service failure risk prediction
+    st.subheader("Service Failure Risk Prediction")
+
+    for service, history in st.session_state["latency_history"].items():
+        risk = predict_service_risk(history)
+
+        if risk == "High Risk":
+            st.error(f"🔴 {service}: {risk}")
+
+        elif risk == "Medium Risk":
+            st.warning(f"🟠 {service}: {risk}")
+
+        elif risk == "Low Risk":
+            st.success(f"🟢 {service}: {risk}")
+
+        else:
+            st.info(f"ℹ️ {service}: {risk}")
+
+    # Incident History
     st.subheader("Incident History")
 
     if st.session_state["incident_history"]:
@@ -135,6 +222,7 @@ def show_dashboard():
 
     else:
         st.info("No incidents recorded yet.")
+
     st.subheader("Service Dependency Map")
 
     dependency_graph = """
