@@ -12,13 +12,38 @@ st.set_page_config(
 
 st.title("🖥️ Distributed Service Health Monitor")
 st.caption("Live monitoring using the main.py health-check function")
+st.subheader("Failure Injection")
+
+selected_service = st.selectbox(
+    "Select a service to simulate failure",
+    [
+        "None",
+        "Database Service",
+        "Authentication Service",
+        "Payment Service",
+        "API Gateway",
+        "Notification Service",
+    ],
+)
+
+if st.button("Inject Failure"):
+    if selected_service == "None":
+        st.warning("Please select a service first.")
+    else:
+        st.session_state["failed_service"] = selected_service
+        st.success(f"Failure injected into {selected_service}!")
+
+if st.button("Recover All Services"):
+    st.session_state["failed_service"] = None
+    st.success("All services recovered!")
 
 
 @st.fragment(run_every=3)
 def show_dashboard():
 
     # Get monitoring data from main.py
-    records = check_service_health()
+    failed_service = st.session_state.get("failed_service", None)
+    records = check_service_health(failed_service)
 
     # Convert results into a DataFrame
     df = pd.DataFrame(records)

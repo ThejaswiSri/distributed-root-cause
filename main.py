@@ -18,13 +18,16 @@ services = [
 ]
 
 
-def check_service_health():
-    """Check all services and return their health information."""
-
+def check_service_health(failed_service=None):
+    """Check service health and optionally simulate a failure."""
     service_results = []
 
     for service in services:
-        response_time = random.randint(50, 500)
+
+        if service == failed_service:
+            response_time = 500
+        else:
+            response_time = random.randint(50, 350)
 
         if response_time > 400:
             status = "Unhealthy"
