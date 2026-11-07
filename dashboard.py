@@ -12,6 +12,8 @@ st.set_page_config(
 
 st.title("🖥️ Distributed Service Health Monitor")
 st.caption("Live monitoring using the main.py health-check function")
+if "incident_history" not in st.session_state:
+    st.session_state["incident_history"] = []
 st.subheader("Failure Injection")
 
 selected_service = st.selectbox(
@@ -31,9 +33,29 @@ if st.button("Inject Failure"):
         st.warning("Please select a service first.")
     else:
         st.session_state["failed_service"] = selected_service
+
+        incident = {
+            "Time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Service": selected_service,
+            "Event": "Failure Injected",
+        }
+
+        st.session_state["incident_history"].append(incident)
+
         st.success(f"Failure injected into {selected_service}!")
 
 if st.button("Recover All Services"):
+    previous_failure = st.session_state.get("failed_service")
+
+    if previous_failure is not None:
+        incident = {
+            "Time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Service": previous_failure,
+            "Event": "Service Recovered",
+        }
+
+        st.session_state["incident_history"].append(incident)
+
     st.session_state["failed_service"] = None
     st.success("All services recovered!")
 
@@ -82,11 +104,50 @@ def show_dashboard():
 
     findings = analyze_root_causes(records)
 
-    if findings:
+    if findings == ["All services are operating normally."]:
+        st.success("All services are operating normally.")
+    else:
         for finding in findings:
             st.warning(finding)
+
+    st.subheader("Service Status Summary")
+
+    for record in records:
+        if record["Status"] == "Unhealthy":
+            st.error(f"🔴 {record['Service']}: Unhealthy")
+        elif record["Status"] == "Affected":
+            st.warning(f"🟠 {record['Service']}: Affected by dependency failure")
+        else:
+            st.success(f"🟢 {record['Service']}: Healthy")
+    
+    st.subheader("Incident History")
+
+    if st.session_state["incident_history"]:
+        history_df = pd.DataFrame(
+            st.session_state["incident_history"]
+        )
+
+        st.dataframe(
+            history_df,
+            width="stretch",
+            hide_index=True,
+        )
+
     else:
-        st.success("All services are operating normally.")
+        st.info("No incidents recorded yet.")
+    st.subheader("Service Dependency Map")
+
+    dependency_graph = """
+    digraph {
+        "API Gateway" -> "Authentication Service"
+        "API Gateway" -> "Payment Service"
+        "Authentication Service" -> "Database Service"
+        "Payment Service" -> "Database Service"
+        "Notification Service" -> "Database Service"
+    }
+    """
+
+    st.graphviz_chart(dependency_graph, width="stretch")
 
 
 show_dashboard()
