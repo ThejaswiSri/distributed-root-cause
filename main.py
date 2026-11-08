@@ -7,7 +7,7 @@ service_dependencies = {
     "Payment Service": ["Database Service"],
     "Authentication Service": ["Database Service"],
     "Notification Service": ["Database Service"],
-    "Database Service": []
+    "Database Service": [],
 }
 
 # Distributed services
@@ -23,17 +23,19 @@ services = [
 def check_service_health(failed_service=None):
     """Check service health and simulate dependency failure propagation."""
 
-    service_results = []
+    # Generate initial latency and health status for each service
+    latency_by_service = {}
     status_by_service = {}
 
-    # Generate initial service health
     for service in services:
         if service == failed_service:
-            response_time = 500
+            latency = 500
         else:
-            response_time = random.randint(50, 350)
+            latency = random.randint(50, 350)
 
-        if response_time > 400:
+        latency_by_service[service] = latency
+
+        if latency > 400:
             status_by_service[service] = "Unhealthy"
         else:
             status_by_service[service] = "Healthy"
@@ -61,22 +63,24 @@ def check_service_health(failed_service=None):
                         break
 
     # Build final service results
+    service_results = []
+
     for service in services:
         if status_by_service[service] == "Unhealthy":
             status = "Unhealthy"
-            response_time = 500
+            latency = latency_by_service[service]
 
         elif service in affected_services:
             status = "Affected"
-            response_time = random.randint(401, 600)
+            latency = random.randint(401, 600)
 
         else:
             status = "Healthy"
-            response_time = random.randint(50, 350)
+            latency = latency_by_service[service]
 
         service_results.append({
             "Service": service,
-            "Latency (ms)": response_time,
+            "Latency (ms)": latency,
             "Status": status,
         })
 
@@ -84,7 +88,7 @@ def check_service_health(failed_service=None):
 
 
 def analyze_root_causes(service_results):
-    """Identify root causes and services affected by failures."""
+    """Identify root causes and explain their impact on dependent services."""
 
     status_by_service = {
         item["Service"]: item["Status"]
@@ -93,34 +97,53 @@ def analyze_root_causes(service_results):
 
     findings = []
 
-    for service, status in status_by_service.items():
+    # Identify original unhealthy services
+    root_causes = [
+        service
+        for service, status in status_by_service.items()
+        if status == "Unhealthy"
+    ]
 
-        if status == "Unhealthy":
+    if not root_causes:
+        if not any(status == "Affected" for status in status_by_service.values()):
+            return ["All services are operating normally."]
 
-            unhealthy_dependencies = [
-                dependency
-                for dependency in service_dependencies[service]
-                if status_by_service.get(dependency) == "Unhealthy"
-            ]
+        return ["Affected services detected. Investigate their dependencies."]
 
-            if unhealthy_dependencies:
+    for root_cause in root_causes:
+        findings.append(
+            f"ROOT CAUSE: {root_cause} is unhealthy. "
+            "Investigate this service."
+        )
+
+        # Find direct and indirect affected services
+        impacted_services = set()
+        changed = True
+
+        while changed:
+            changed = False
+
+            for service, dependencies in service_dependencies.items():
+                if service in impacted_services or service == root_cause:
+                    continue
+
+                if any(
+                    dependency == root_cause
+                    or dependency in impacted_services
+                    for dependency in dependencies
+                ):
+                    impacted_services.add(service)
+                    changed = True
+
+        for service in services:
+            if (
+                service in impacted_services
+                and status_by_service.get(service) == "Affected"
+            ):
                 findings.append(
-                    f"{service} may be affected by unhealthy "
-                    f"dependency: {', '.join(unhealthy_dependencies)}"
+                    f"IMPACT: {service} is affected by "
+                    f"{root_cause} failure."
                 )
-            else:
-                findings.append(
-                    f"ROOT CAUSE: {service} is unhealthy. "
-                    "Investigate this service."
-                )
-
-        elif status == "Affected":
-            findings.append(
-                f"IMPACT: {service} is affected by another service failure."
-            )
-
-    if not findings:
-        findings.append("All services are operating normally.")
 
     return findings
 
@@ -134,9 +157,7 @@ def predict_service_risk(latency_history):
     # Use the latest five measurements
     recent_latencies = latency_history[-5:]
 
-    average_latency = (
-        sum(recent_latencies) / len(recent_latencies)
-    )
+    average_latency = sum(recent_latencies) / len(recent_latencies)
 
     if average_latency >= 350:
         return "High Risk"

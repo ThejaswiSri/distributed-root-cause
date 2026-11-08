@@ -51,7 +51,8 @@ if "incident_history" not in st.session_state:
 # Initialize latency history
 if "latency_history" not in st.session_state:
     st.session_state["latency_history"] = {
-        service: [] for service in [
+        service: []
+        for service in [
             "Database Service",
             "Authentication Service",
             "Payment Service",
@@ -136,17 +137,19 @@ def show_dashboard():
     # Calculate service metrics
     healthy = (df["Status"] == "Healthy").sum()
     unhealthy = (df["Status"] == "Unhealthy").sum()
+    affected = (df["Status"] == "Affected").sum()
     average_latency = round(df["Latency (ms)"].mean(), 2)
 
     st.caption(
         f"Last updated: {datetime.now().strftime('%H:%M:%S')}"
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Total Services", len(df))
     col2.metric("Healthy Services", healthy)
     col3.metric("Unhealthy Services", unhealthy)
+    col4.metric("Affected Services", affected)
 
     st.subheader("Service Health")
 

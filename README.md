@@ -1,10 +1,11 @@
-# Distributed Service Health Simulator
+
+# Distributed Service Health Monitor
 
 ## Overview
 
-A Python-based distributed systems simulation project that monitors service health, tracks latency, simulates service failures, and identifies potential root causes through dependency-aware analysis.
+A Python-based distributed systems simulation project that monitors service health, tracks response latency, simulates service failures, and identifies potential root causes through dependency-aware analysis.
 
-The project includes a live Streamlit dashboard with failure injection, dependency failure propagation, incident history, and latency-based service failure risk estimation.
+The project includes an interactive Streamlit dashboard with failure injection, dependency failure propagation, persistent incident history, latency monitoring, and rule-based service failure risk estimation.
 
 ## Features
 
@@ -15,10 +16,11 @@ The project includes a live Streamlit dashboard with failure injection, dependen
 - Simulate direct and indirect dependency failure propagation.
 - Inject controlled failures into individual services.
 - Recover services after simulated failures.
-- Identify possible root causes using dependency-aware analysis.
+- Identify potential root causes using dependency-aware analysis.
 - Display service health metrics and latency through a live Streamlit dashboard.
 - Automatically refresh monitoring results every 3 seconds.
-- Maintain an incident history of failure and recovery events during the dashboard session.
+- Display healthy, unhealthy, and affected service counts.
+- Maintain persistent incident history using JSON storage.
 - Track recent latency measurements for each service.
 - Estimate service failure risk using recent latency measurements.
 - Classify service risk as Low, Medium, or High.
@@ -41,9 +43,12 @@ distributed-root-cause/
 ├── main.py
 ├── dashboard.py
 ├── test_main.py
+├── incident_history.json
 ├── README.md
 └── .gitignore
 ```
+
+Note: `incident_history.json` is generated automatically when incidents are recorded.
 
 ## How to Run
 
@@ -80,7 +85,7 @@ python -m pip install streamlit pandas pytest
 python -m streamlit run dashboard.py
 ```
 
-Open the local URL displayed in your terminal to view the dashboard.
+Open the local URL displayed in your terminal to access the dashboard.
 
 ## Running Automated Tests
 
@@ -90,7 +95,14 @@ Run the following command from the project directory:
 python -m pytest -v
 ```
 
-The tests verify service health, database failure detection, dependency failure propagation, and normal service health after recovery.
+The automated tests cover:
+
+- Normal service health.
+- Database failure detection.
+- High latency during a simulated database failure.
+- Direct and indirect dependency failure propagation.
+- Recovery to normal service health.
+- Handling of invalid service names.
 
 ## Failure Risk Estimation
 
@@ -101,23 +113,35 @@ The project uses a rule-based approach to estimate service failure risk from rec
 - **High Risk:** Average latency of 350 ms or above.
 - At least three measurements are required before a risk estimate is available.
 
-The latest five measurements are used when available. This is a heuristic-based risk estimator, not a trained machine-learning model.
+The latest five measurements are used when available.
+
+This is a heuristic-based risk estimator, not a trained machine-learning model.
+
+## Incident History
+
+Incident events are stored in `incident_history.json` so that failure and recovery records remain available after restarting the dashboard.
+
+The dashboard records:
+- Failure injection events.
+- Service recovery events.
+- Event timestamps.
+- The affected service.
 
 ## Project Status
 
-Currently under development.
+**Working prototype — Version 1.0 preparation.**
 
-Service health and latency are simulated using Python. Dependency propagation is based on configured service relationships. Risk estimation uses recent simulated latency measurements.
+The project currently provides simulated distributed service monitoring, dependency-aware failure propagation, root-cause analysis, persistent incident recording, and latency-based risk estimation.
 
-Incident history and latency history are maintained in Streamlit session state and are not permanently stored across application restarts.
+Service health and latency are simulated using Python. The risk estimator uses recent simulated latency measurements rather than real production telemetry.
 
 ## Future Improvements
 
-- Introduce historical data storage.
+- Integrate real service health endpoints.
 - Improve latency trend analysis.
 - Explore machine-learning-based failure prediction.
-- Add more comprehensive root-cause analysis.
-- Improve dashboard visualizations and reporting.
+- Expand root-cause analysis.
+- Add more comprehensive monitoring and reporting.
 
 ## Author
 
