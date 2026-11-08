@@ -35,10 +35,35 @@ The project includes an interactive Streamlit dashboard with failure injection, 
 - Git
 - GitHub
 
+## Dashboard Screenshots
+
+### 1. Healthy Services
+
+All five services are operating normally.
+
+![Healthy Services](screenshots/healthy-state.png)
+
+### 2. Database Service Failure
+
+Demonstrates how a Database Service failure affects dependent services.
+
+![Database Failure](screenshots/database-failure.png)
+
+### 3. Root Cause Analysis
+
+Displays the identified root cause and the services affected by the failure.
+
+![Root Cause Analysis](screenshots/root-cause-analysis.png)
+
 ## Project Structure
 
 ```text
 distributed-root-cause/
+│
+├── screenshots/
+│   ├── healthy-state.png
+│   ├── database-failure.png
+│   └── root-cause-analysis.png
 │
 ├── main.py
 ├── dashboard.py
@@ -122,6 +147,7 @@ This is a heuristic-based risk estimator, not a trained machine-learning model.
 Incident events are stored in `incident_history.json` so that failure and recovery records remain available after restarting the dashboard.
 
 The dashboard records:
+
 - Failure injection events.
 - Service recovery events.
 - Event timestamps.
@@ -129,7 +155,7 @@ The dashboard records:
 
 ## Project Status
 
-**Working prototype — Version 1.0 preparation.**
+**Working prototype — Version 1.0.**
 
 The project currently provides simulated distributed service monitoring, dependency-aware failure propagation, root-cause analysis, persistent incident recording, and latency-based risk estimation.
 
